@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Sidebar from './components/Sidebar';
@@ -42,9 +43,13 @@ function Shell() {
   };
 
   if (!isAuthenticated) {
-    return authMode === 'login'
-      ? <LoginPage onToggleAuth={() => setAuthMode('signup')} />
-      : <SignupPage onToggleAuth={() => setAuthMode('login')} />;
+    return (
+      <ErrorBoundary>
+        {authMode === 'login'
+          ? <LoginPage onToggleAuth={() => setAuthMode('signup')} />
+          : <SignupPage onToggleAuth={() => setAuthMode('login')} />}
+      </ErrorBoundary>
+    );
   }
 
   const meta = META[page] || META.dashboard;
@@ -64,26 +69,32 @@ function Shell() {
   };
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg-base)' }}>
-      <Sidebar currentPage={page} onNavigate={navigate} />
-      <div className="lg:ml-[260px] min-h-dvh flex flex-col">
-        <Header title={meta.title} subtitle={meta.subtitle} onNavigate={navigate} />
-        <main key={transitionKey} className="flex-1 anim-fade-up">
-          <PageContent />
-        </main>
+    <ErrorBoundary>
+      <div className="min-h-dvh" style={{ background: 'var(--bg-base)' }}>
+        <Sidebar currentPage={page} onNavigate={navigate} />
+        <div className="lg:ml-[260px] min-h-dvh flex flex-col">
+          <Header title={meta.title} subtitle={meta.subtitle} onNavigate={navigate} />
+          <main key={transitionKey} className="flex-1 anim-fade-up">
+            <ErrorBoundary>
+              <PageContent />
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <DataProvider>
-          <Shell />
-        </DataProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <DataProvider>
+            <Shell />
+          </DataProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
