@@ -18,6 +18,14 @@ server/.env.development.local
 server/.env.test.local
 server/.env.production.local
 
+# Root environment files
+.env
+.env.example
+
+# Lock files (optional, if you want to ignore them)
+# package-lock.json
+# server/package-lock.json
+
 # Build outputs
 dist/
 build/

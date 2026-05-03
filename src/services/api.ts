@@ -95,20 +95,25 @@ export async function fetchWeather(lat?: string, lon?: string): Promise<WeatherD
   return fetchJSON(`${API_BASE}/weather?${params}`);
 }
 
-export async function fetchSoil(): Promise<SoilData> {
-  return fetchJSON(`${API_BASE}/soil`);
+
+export async function fetchSoil(paramsObj?: Record<string, string>): Promise<SoilData> {
+  const params = new URLSearchParams(paramsObj || {});
+  return fetchJSON(`${API_BASE}/soil?${params}`);
 }
 
-export async function fetchCrops(): Promise<CropRecommendation[]> {
-  return fetchJSON(`${API_BASE}/crops`);
+export async function fetchCrops(paramsObj?: Record<string, string>): Promise<CropRecommendation[]> {
+  const params = new URLSearchParams(paramsObj || {});
+  return fetchJSON(`${API_BASE}/crops?${params}`);
 }
 
-export async function fetchIrrigation(): Promise<IrrigationZone[]> {
-  return fetchJSON(`${API_BASE}/irrigation`);
+export async function fetchIrrigation(paramsObj?: Record<string, string>): Promise<IrrigationZone[]> {
+  const params = new URLSearchParams(paramsObj || {});
+  return fetchJSON(`${API_BASE}/irrigation?${params}`);
 }
 
-export async function fetchFertilizer(): Promise<FertilizerRecommendation[]> {
-  return fetchJSON(`${API_BASE}/fertilizer`);
+export async function fetchFertilizer(paramsObj?: Record<string, string>): Promise<FertilizerRecommendation[]> {
+  const params = new URLSearchParams(paramsObj || {});
+  return fetchJSON(`${API_BASE}/fertilizer?${params}`);
 }
 
 export async function fetchInsights(): Promise<Alert[]> {

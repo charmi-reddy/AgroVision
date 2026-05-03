@@ -18,6 +18,10 @@ export default function FarmDetailsPage() {
   const [lon, setLon] = useState(activeFarm?.lon || 75.3412);
   const [soilType, setSoilType] = useState(activeFarm?.soilType || '');
   const [area, setArea] = useState(activeFarm?.area || 0);
+  const [crop, setCrop] = useState(activeFarm?.crop || '');
+  const [irrigationAmount, setIrrigationAmount] = useState(activeFarm?.irrigationAmount || '');
+  const [irrigationSource, setIrrigationSource] = useState(activeFarm?.irrigationSource || '');
+  const [fertilizer, setFertilizer] = useState(activeFarm?.fertilizer || '');
 
   useEffect(() => {
     if (activeFarm) {
@@ -27,6 +31,10 @@ export default function FarmDetailsPage() {
       setLon(activeFarm.lon);
       setSoilType(activeFarm.soilType || '');
       setArea(activeFarm.area || 0);
+      setCrop(activeFarm.crop || '');
+      setIrrigationAmount(activeFarm.irrigationAmount || '');
+      setIrrigationSource(activeFarm.irrigationSource || '');
+      setFertilizer(activeFarm.fertilizer || '');
     }
   }, [activeFarm]);
 
@@ -39,12 +47,18 @@ export default function FarmDetailsPage() {
       lon,
       soilType,
       area,
+      crop,
+      irrigationAmount,
+      irrigationSource,
+      fertilizer,
     });
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   };
 
   const isDataComplete = name.trim() && location.trim() && soilType && area > 0;
+  // Add crop, irrigation, fertilizer as required fields
+  const isFullDataComplete = isDataComplete && crop && irrigationAmount && irrigationSource && fertilizer;
 
   const handleRunAnalysis = async () => {
     if (!isDataComplete) {
@@ -105,6 +119,58 @@ export default function FarmDetailsPage() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Basic Information</h2>
           <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                            Crop <span style={{ color: 'var(--danger)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={crop}
+                            onChange={e => setCrop(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border"
+                            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                            placeholder="e.g. Wheat, Rice, Maize"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                            Irrigation Amount (mm/season) <span style={{ color: 'var(--danger)' }}>*</span>
+                          </label>
+                          <input
+                            type="number"
+                            value={irrigationAmount}
+                            onChange={e => setIrrigationAmount(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border"
+                            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                            placeholder="e.g. 1000"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                            Irrigation Source <span style={{ color: 'var(--danger)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={irrigationSource}
+                            onChange={e => setIrrigationSource(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border"
+                            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                            placeholder="e.g. Canal, Tube well"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                            Fertilizer Used <span style={{ color: 'var(--danger)' }}>*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={fertilizer}
+                            onChange={e => setFertilizer(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border"
+                            style={{ background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}
+                            placeholder="e.g. Urea, DAP, Compost"
+                          />
+                        </div>
             <div>
               <label className="block text-sm font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
                 Farm Name <span style={{ color: 'var(--danger)' }}>*</span>
@@ -196,7 +262,7 @@ export default function FarmDetailsPage() {
           </button>
           <button
             onClick={handleRunAnalysis}
-            disabled={analyzing || !isDataComplete}
+            disabled={analyzing || !isFullDataComplete}
             className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
           >

@@ -63,12 +63,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     try {
       const lat = activeFarm.lat.toString();
       const lon = activeFarm.lon.toString();
+      const farmParams = {
+        crop: activeFarm.crop || '',
+        soilType: activeFarm.soilType || '',
+        irrigationAmount: activeFarm.irrigationAmount || '',
+        irrigationSource: activeFarm.irrigationSource || '',
+        fertilizer: activeFarm.fertilizer || '',
+      };
       const [w, s, c, i, f, a] = await Promise.all([
         fetchWeather(lat, lon),
-        fetchSoil(),
-        fetchCrops(),
-        fetchIrrigation(),
-        fetchFertilizer(),
+        fetchSoil(farmParams),
+        fetchCrops(farmParams),
+        fetchIrrigation(farmParams),
+        fetchFertilizer(farmParams),
         fetchInsights(),
       ]);
       setWeather(w);

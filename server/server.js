@@ -78,7 +78,13 @@ function mapIcon(code) {
 
 app.get('/api/soil', async (req, res) => {
   try {
+    const { crop, soilType, irrigationAmount, irrigationSource, fertilizer } = req.query;
     const prompt = `You are a smart soil analysis AI for a farm in Punjab, India.
+Crop: ${crop || 'Not specified'}
+Soil type: ${soilType || 'alluvial loam'}
+Irrigation amount: ${irrigationAmount || 'Not specified'}
+Irrigation source: ${irrigationSource || 'Not specified'}
+Fertilizer used: ${fertilizer || 'Not specified'}
 Return ONLY valid JSON with these fields:
 {
   "moisture": <number 20-80>,
@@ -90,7 +96,7 @@ Return ONLY valid JSON with these fields:
   "temperature": <number 15-35>,
   "conductivity": <number 0.3-2.5>
 }
-The values should be realistic for alluvial loam soil in semi-arid climate.`;
+The values should be realistic for the provided soil and farm context.`;
 
     const { data } = await axios.post(`${GEMINI_URL}?key=${GEMINI_API}`, {
       contents: [{ parts: [{ text: prompt }] }],
@@ -120,7 +126,13 @@ The values should be realistic for alluvial loam soil in semi-arid climate.`;
 
 app.get('/api/crops', async (req, res) => {
   try {
-    const prompt = `You are an AI crop advisor for a farm in Punjab, India with alluvial loam soil.
+    const { crop, soilType, irrigationAmount, irrigationSource, fertilizer } = req.query;
+    const prompt = `You are an AI crop advisor for a farm in Punjab, India.
+Crop: ${crop || 'Not specified'}
+Soil type: ${soilType || 'alluvial loam'}
+Irrigation amount: ${irrigationAmount || 'Not specified'}
+Irrigation source: ${irrigationSource || 'Not specified'}
+Fertilizer used: ${fertilizer || 'Not specified'}
 Current conditions: Soil pH 6.5, moisture 42%, temp 24°C, nitrogen 180 kg/ha.
 
 Return ONLY valid JSON — an array of 6 crop recommendations with these fields:
@@ -176,8 +188,15 @@ Rank by confidence score. Include drought-resistant varieties.`;
 
 app.get('/api/irrigation', async (req, res) => {
   try {
-    const prompt = `You are an irrigation AI for a farm. Generate 5 irrigation zones with realistic data.
-Return ONLY valid JSON array:
+    const { crop, soilType, irrigationAmount, irrigationSource, fertilizer } = req.query;
+    const prompt = `You are an irrigation AI for a farm.
+  Crop: ${crop || 'Not specified'}
+  Soil type: ${soilType || 'alluvial loam'}
+  Irrigation amount: ${irrigationAmount || 'Not specified'}
+  Irrigation source: ${irrigationSource || 'Not specified'}
+  Fertilizer used: ${fertilizer || 'Not specified'}
+  Generate 5 irrigation zones with realistic data.
+  Return ONLY valid JSON array:
 [
   {
     "id": "1",
@@ -226,7 +245,13 @@ Include one active zone, one due today.`;
 
 app.get('/api/fertilizer', async (req, res) => {
   try {
+    const { crop, soilType, irrigationAmount, irrigationSource, fertilizer } = req.query;
     const prompt = `You are a precision fertilizer AI for a farm in Punjab.
+Crop: ${crop || 'Not specified'}
+Soil type: ${soilType || 'alluvial loam'}
+Irrigation amount: ${irrigationAmount || 'Not specified'}
+Irrigation source: ${irrigationSource || 'Not specified'}
+Fertilizer used: ${fertilizer || 'Not specified'}
 Based on soil: N 180, P 35, K 220 kg/ha, pH 6.5, organic matter 3.8%.
 
 Return ONLY valid JSON array of 5 fertilizer recommendations:
