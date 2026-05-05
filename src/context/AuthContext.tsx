@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { apiLogin, apiSaveUser, apiSignup } from '../services/api';
 
 export interface Farm {
   id: string;
@@ -8,6 +9,10 @@ export interface Farm {
   lon: number;
   soilType?: string;
   area?: number;
+  crop?: string;
+  irrigationAmount?: string;
+  irrigationSource?: string;
+  fertilizer?: string;
 }
 
 export interface User {
@@ -43,15 +48,20 @@ const STORAGE_KEYS = {
   CURRENT: 'agrovision_current_user',
 };
 
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
+
 function getStoredUsers(): Record<string, User> {
   try {
     const raw = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
     const cleaned: Record<string, User> = {};
     Object.entries(raw).forEach(([email, value]) => {
       const u = value as Partial<User> & { farmName?: string; location?: string };
-      const isLegacyDemo = u.name === 'Rajesh Kumar' || email === 'farmer@agrovision.ai' || email === 'farmer@agrisense.ai';
+      const normalized = normalizeEmail(u.email || email);
+      const isLegacyDemo = u.name === 'Rajesh Kumar' || normalized === 'farmer@agrovision.ai' || normalized === 'farmer@agrisense.ai';
       const isValid = Boolean(u.email && u.name && Array.isArray(u.farms));
-      if (!isLegacyDemo && isValid) cleaned[email] = u as User;
+      if (!isLegacyDemo && isValid) cleaned[normalized] = { ...(u as User), email: normalized };
     });
     if (Object.keys(cleaned).length !== Object.keys(raw).length) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(cleaned));
@@ -78,8 +88,17 @@ function getStoredCurrentUser(): User | null {
       localStorage.removeItem(STORAGE_KEYS.CURRENT);
       return null;
     }
-    return parsed as User;
+    return { ...(parsed as User), email: normalizeEmail(parsed.email || '') };
   } catch { return null; }
+}
+
+function saveStoredUser(u: User) {
+  const normalizedUser = { ...u, email: normalizeEmail(u.email) };
+  const users = getStoredUsers();
+  users[normalizedUser.email] = normalizedUser;
+  localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+  localStorage.setItem(STORAGE_KEYS.CURRENT, JSON.stringify(normalizedUser));
+  return normalizedUser;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -100,11 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (parsed?.email) {
             // Migrate to the users registry if not already there
             const users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS) || '{}');
-            if (!users[parsed.email]) {
-              users[parsed.email] = {
+            const email = normalizeEmail(parsed.email);
+            if (!users[email]) {
+              users[email] = {
                 id: parsed.id || 'user_migrated_' + Date.now(),
                 name: parsed.name || parsed.farmName || 'Farmer',
-                email: parsed.email,
+                email,
                 avatar: parsed.avatar || 'FA',
                 farms: Array.isArray(parsed.farms) ? parsed.farms : [],
                 activeFarmId: parsed.activeFarmId || null,
@@ -136,20 +156,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getStoredCurrentUser);
   const [isLoading, setIsLoading] = useState(false);
 
-  const persistUser = useCallback((u: User) => {
-    const users = getStoredUsers();
-    users[u.email] = u;
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-    localStorage.setItem(STORAGE_KEYS.CURRENT, JSON.stringify(u));
-    setUser(u);
+  const persistUserLocal = useCallback((u: User) => {
+    const normalizedUser = saveStoredUser(u);
+    setUser(normalizedUser);
+    return normalizedUser;
   }, []);
+
+  const persistUser = useCallback((u: User) => {
+    const normalizedUser = persistUserLocal(u);
+    apiSaveUser(normalizedUser).catch(error => {
+      console.error('Failed to sync user:', error);
+    });
+    return normalizedUser;
+  }, [persistUserLocal]);
 
   const login = useCallback(async (email: string, _password: string): Promise<boolean> => {
     setIsLoading(true);
     await new Promise(r => setTimeout(r, 1000));
+    const normalizedEmail = normalizeEmail(email);
+
+    try {
+      const serverUser = await apiLogin(normalizedEmail, _password);
+      persistUserLocal(serverUser as User);
+      setIsLoading(false);
+      return true;
+    } catch (error) {
+      console.error('Server login failed, checking local session cache:', error);
+    }
 
     const users = getStoredUsers();
-    const existingUser = users[email];
+    const existingUser = users[normalizedEmail];
 
     if (existingUser) {
       // Known user — welcome back
@@ -161,33 +197,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // User doesn't exist — reject
     setIsLoading(false);
     return false;
-  }, [persistUser]);
+  }, [persistUser, persistUserLocal]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
     setIsLoading(true);
     await new Promise(r => setTimeout(r, 1200));
+    const normalizedEmail = normalizeEmail(data.email);
 
-    const users = getStoredUsers();
-    if (users[data.email]) {
+    try {
+      const serverUser = await apiSignup({ ...data, email: normalizedEmail });
+      persistUserLocal(serverUser as User);
       setIsLoading(false);
-      return false; // Email already taken
+      return true;
+    } catch (error: any) {
+      if (error?.message?.toLowerCase().includes('already')) {
+        setIsLoading(false);
+        return false;
+      }
+      console.error('Server signup failed:', error);
+      setIsLoading(false);
+      return false;
     }
-
-    const initials = data.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-
-    const newUser: User = {
-      id: 'user_' + Date.now(),
-      name: data.name,
-      email: data.email,
-      avatar: initials || 'FA',
-      farms: [],
-      activeFarmId: null,
-    };
-
-    persistUser(newUser);
-    setIsLoading(false);
-    return true;
-  }, [persistUser]);
+  }, [persistUserLocal]);
 
   const addFarm = useCallback((farm: Farm) => {
     setUser(prev => {
@@ -197,10 +228,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         farms: [...prev.farms, farm],
         activeFarmId: prev.activeFarmId || farm.id,
       };
-      persistUser(updated);
-      return updated;
+      const saved = saveStoredUser(updated);
+      apiSaveUser(saved).catch(error => {
+        console.error('Failed to sync user:', error);
+      });
+      return saved;
     });
-  }, [persistUser]);
+  }, []);
 
   const updateFarm = useCallback((farmId: string, updates: Partial<Farm>) => {
     setUser(prev => {
@@ -209,10 +243,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...prev,
         farms: prev.farms.map(f => f.id === farmId ? { ...f, ...updates } : f),
       };
-      persistUser(updated);
-      return updated;
+      const saved = saveStoredUser(updated);
+      apiSaveUser(saved).catch(error => {
+        console.error('Failed to sync user:', error);
+      });
+      return saved;
     });
-  }, [persistUser]);
+  }, []);
 
   const removeFarm = useCallback((farmId: string) => {
     setUser(prev => {
@@ -222,19 +259,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ? (remaining.length > 0 ? remaining[0].id : null)
         : prev.activeFarmId;
       const updated: User = { ...prev, farms: remaining, activeFarmId: newActiveId };
-      persistUser(updated);
-      return updated;
+      const saved = saveStoredUser(updated);
+      apiSaveUser(saved).catch(error => {
+        console.error('Failed to sync user:', error);
+      });
+      return saved;
     });
-  }, [persistUser]);
+  }, []);
 
   const setActiveFarm = useCallback((farmId: string) => {
     setUser(prev => {
       if (!prev) return prev;
       const updated: User = { ...prev, activeFarmId: farmId };
-      persistUser(updated);
-      return updated;
+      const saved = saveStoredUser(updated);
+      apiSaveUser(saved).catch(error => {
+        console.error('Failed to sync user:', error);
+      });
+      return saved;
     });
-  }, [persistUser]);
+  }, []);
 
   const logout = useCallback(() => {
     setUser(null);

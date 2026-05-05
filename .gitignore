@@ -20,7 +20,6 @@ server/.env.production.local
 
 # Root environment files
 .env
-.env.example
 
 # Lock files (optional, if you want to ignore them)
 # package-lock.json
@@ -30,6 +29,7 @@ server/.env.production.local
 dist/
 build/
 .vite/
+*.tsbuildinfo
 
 # IDE and editor files
 .vscode/
@@ -50,12 +50,20 @@ Thumbs.db
 # Logs
 logs
 *.log
+server.log
+server.err.log
+vite.log
+vite.err.log
 
 # Runtime data
 pids
 *.pid
 *.seed
 *.pid.lock
+
+# Local app/runtime data
+server/data/
+run.txt
 
 # Coverage directory used by tools like istanbul
 coverage/
@@ -109,6 +117,12 @@ jspm_packages/
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+
+# Tool caches
+.eslintcache
+.stylelintcache
+.turbo/
+.vercel/
 
 # Temporary folders
 tmp/

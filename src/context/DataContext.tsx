@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth, type Farm } from './AuthContext';
 import {
   fetchWeather, fetchSoil, fetchCrops, fetchIrrigation,
   fetchFertilizer, fetchInsights,
@@ -16,14 +16,14 @@ interface DataCtx {
   alerts: Alert[];
   loading: boolean;
   error: string | null;
-  refresh: () => Promise<void>;
+  refresh: (farmOverride?: Farm) => Promise<boolean>;
   hasAnalyzedData: boolean;
 }
 
 const Ctx = createContext<DataCtx>({
   weather: null, soil: null, crops: [], irrigation: [],
   fertilizer: [], alerts: [], loading: false, error: null,
-  refresh: async () => {}, hasAnalyzedData: false,
+  refresh: async () => false, hasAnalyzedData: false,
 });
 
 export function DataProvider({ children }: { children: ReactNode }) {
@@ -38,15 +38,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [hasAnalyzedData, setHasAnalyzedData] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (farmOverride?: Farm) => {
     // Find active farm
-    const activeFarm = user?.farms?.find(f => f.id === user.activeFarmId);
+    const activeFarm = farmOverride || user?.farms?.find(f => f.id === user.activeFarmId);
     if (!activeFarm) {
       setLoading(false);
       setWeather(null); setSoil(null); setCrops([]);
       setIrrigation([]); setFertilizer([]); setAlerts([]);
       setHasAnalyzedData(false);
-      return;
+      return false;
     }
 
     // Check if farm has required data
@@ -55,7 +55,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setWeather(null); setSoil(null); setCrops([]);
       setIrrigation([]); setFertilizer([]); setAlerts([]);
       setHasAnalyzedData(false);
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -85,10 +85,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setFertilizer(f);
       setAlerts(a);
       setHasAnalyzedData(true);
+      return true;
     } catch (err: any) {
       setError(err.message || 'Failed to load farm data');
       console.error('Data load error:', err);
       setHasAnalyzedData(false);
+      return false;
     } finally {
       setLoading(false);
     }

@@ -2,12 +2,14 @@ import { Bell, Search, Mic, Sun, Moon, Sparkles, ChevronDown } from 'lucide-reac
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
+import { useLanguage } from '../context/LanguageContext';
 import { useState, useRef, useEffect } from 'react';
 
 export default function Header({ title, subtitle, onNavigate }: { title: string; subtitle?: string; onNavigate: (p: string) => void }) {
   const { user, setActiveFarm } = useAuth();
   const { theme, toggle } = useTheme();
   const { alerts } = useData();
+  const { language, setLanguage, t } = useLanguage();
   const [farmOpen, setFarmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const unread = alerts.filter(a => !a.read).length;
@@ -29,7 +31,7 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
           <div className="flex items-center gap-2">
             <h1 className="text-[18px] sm:text-[20px] font-extrabold tight truncate" style={{ color: 'var(--text-primary)' }}>{title}</h1>
             <span className="hidden sm:inline-flex chip chip-accent !text-[9px] !px-2">
-              <Sparkles className="w-2.5 h-2.5" /> AI
+              <Sparkles className="w-2.5 h-2.5" /> {t('AI')}
             </span>
           </div>
           {subtitle && (
@@ -38,7 +40,6 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Farm switcher */}
           {user && user.farms.length > 0 && (
             <div className="relative" ref={menuRef}>
               <button
@@ -46,7 +47,7 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
                 className="hidden md:flex items-center gap-1.5 px-3 py-[7px] rounded-xl text-[12px] font-bold cursor-pointer"
                 style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               >
-                {activeFarm?.name || 'Select Farm'}
+                {activeFarm?.name || t('Select Farm')}
                 <ChevronDown className="w-3 h-3" style={{ color: 'var(--text-tertiary)' }} />
               </button>
               {farmOpen && (
@@ -62,7 +63,7 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
                         color: farm.id === user.activeFarmId ? 'var(--accent)' : 'var(--text-primary)',
                       }}
                     >
-                      <span className="text-lg">{farm.id === user.activeFarmId ? '📍' : '🏡'}</span>
+                      <span className="text-lg">{farm.id === user.activeFarmId ? '\u{1f4cd}' : '\u{1f3e1}'}</span>
                       <div className="min-w-0">
                         <p className="truncate">{farm.name}</p>
                         <p className="text-[10px] font-normal truncate" style={{ color: 'var(--text-tertiary)' }}>{farm.location}</p>
@@ -77,11 +78,11 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
           <div className="hidden md:flex items-center gap-2 px-3.5 py-[9px] rounded-xl w-52 lg:w-72 transition-all"
             style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)' }}>
             <Search className="w-3.5 h-3.5" style={{ color: 'var(--text-tertiary)' }} />
-            <input type="text" placeholder="Search insights, fields…"
+            <input type="text" placeholder={t('Search insights, fields...')}
               className="bg-transparent outline-none text-[13px] w-full"
               style={{ color: 'var(--text-primary)' }} />
             <kbd className="hidden lg:inline text-[9px] px-1.5 py-px rounded font-mono"
-              style={{ background: 'var(--bg-elevated)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}>⌘K</kbd>
+              style={{ background: 'var(--bg-elevated)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}>Ctrl K</kbd>
           </div>
 
           <button className="btn-icon hidden sm:flex relative group">
@@ -89,7 +90,30 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
             <span className="absolute inset-0 rounded-[10px] anim-pulse-glow pointer-events-none" />
           </button>
 
-          <button onClick={toggle} className="theme-toggle-track" aria-label="Toggle theme">
+          <div className="hidden sm:flex items-center gap-1 rounded-xl p-1"
+            style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)' }}
+            aria-label={t('Language')}>
+            {[
+              { id: 'en' as const, label: 'English' },
+              { id: 'hi' as const, label: '\u0939\u093f\u0902\u0926\u0940' },
+              { id: 'te' as const, label: '\u0c24\u0c46\u0c32\u0c41\u0c17\u0c41' },
+            ].map(option => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setLanguage(option.id)}
+                className="px-2.5 py-1.5 rounded-lg text-[11px] font-extrabold cursor-pointer transition-all"
+                style={{
+                  background: language === option.id ? 'var(--accent)' : 'transparent',
+                  color: language === option.id ? 'white' : 'var(--text-secondary)',
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={toggle} className="theme-toggle-track" aria-label={t('Toggle theme')}>
             <span className="theme-toggle-thumb">
               {theme === 'dark' ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
             </span>

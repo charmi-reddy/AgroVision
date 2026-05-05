@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DataProvider } from './context/DataContext';
+import { LanguageProvider, useLanguage } from './context/LanguageContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -34,6 +35,7 @@ function Shell() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [page, setPage] = useState('dashboard');
   const [transitionKey, setTransitionKey] = useState(0);
+  const { t } = useLanguage();
 
   const navigate = (p: string) => {
     if (p === page) return;
@@ -52,7 +54,8 @@ function Shell() {
     );
   }
 
-  const meta = META[page] || META.dashboard;
+  const rawMeta = META[page] || META.dashboard;
+  const meta = { title: t(rawMeta.title), subtitle: t(rawMeta.subtitle) };
 
   const PageContent = () => {
     switch (page) {
@@ -89,11 +92,13 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <AuthProvider>
-          <DataProvider>
-            <Shell />
-          </DataProvider>
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <DataProvider>
+              <Shell />
+            </DataProvider>
+          </AuthProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

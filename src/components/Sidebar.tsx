@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   LayoutDashboard, CloudSun, Sprout, Droplets, FlaskConical,
   Bell, Settings, LogOut, BarChart3, Menu, X, ChevronsLeft, ChevronsRight,
@@ -24,6 +25,7 @@ export default function Sidebar({ currentPage, onNavigate }: { currentPage: stri
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   const go = (p: string) => { onNavigate(p); setMobileOpen(false); };
   const expanded = !collapsed || mobileOpen;
@@ -33,7 +35,7 @@ export default function Sidebar({ currentPage, onNavigate }: { currentPage: stri
     <div>
       {expanded && (
         <p className="px-3 pt-4 pb-2 text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: 'var(--text-tertiary)' }}>
-          {title}
+          {t(title)}
         </p>
       )}
       {items.map(item => {
@@ -45,12 +47,12 @@ export default function Sidebar({ currentPage, onNavigate }: { currentPage: stri
             style={{ background: active ? 'var(--accent-soft)' : 'transparent', color: active ? 'var(--accent)' : 'var(--text-secondary)' }}>
             {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full" style={{ background: 'var(--accent)', boxShadow: '0 0 12px var(--accent-glow)' }} />}
             <Icon className="w-[18px] h-[18px] flex-shrink-0" strokeWidth={active ? 2.4 : 1.8} />
-            {expanded && <span className="truncate flex-1 text-left">{item.label}</span>}
+            {expanded && <span className="truncate flex-1 text-left">{t(item.label)}</span>}
             {active && expanded && <span className="live-dot" />}
             {!expanded && (
               <span className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none -translate-x-2 group-hover:translate-x-0 transition-all duration-200 z-50"
                 style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)', color: 'var(--text-primary)', boxShadow: 'var(--shadow-md)' }}>
-                {item.label}
+                {t(item.label)}
               </span>
             )}
           </button>
@@ -93,12 +95,12 @@ export default function Sidebar({ currentPage, onNavigate }: { currentPage: stri
         <button onClick={() => go('settings')} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium cursor-pointer"
           style={{ color: currentPage === 'settings' ? 'var(--accent)' : 'var(--text-secondary)', background: currentPage === 'settings' ? 'var(--accent-soft)' : 'transparent' }}>
           <Settings className="w-[18px] h-[18px]" strokeWidth={1.8} />
-          {expanded && <span>Settings</span>}
+          {expanded && <span>{t('Settings')}</span>}
         </button>
         <button onClick={logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium cursor-pointer hover:!bg-red-500/10"
           style={{ color: 'var(--text-secondary)' }}>
           <LogOut className="w-[18px] h-[18px]" strokeWidth={1.8} />
-          {expanded && <span>Logout</span>}
+          {expanded && <span>{t('Logout')}</span>}
         </button>
       </div>
 
@@ -113,7 +115,7 @@ export default function Sidebar({ currentPage, onNavigate }: { currentPage: stri
             {expanded && (
               <div className="min-w-0 flex-1">
                 <p className="text-[12px] font-semibold truncate leading-tight" style={{ color: 'var(--text-primary)' }}>{user.name}</p>
-                <p className="text-[10px] truncate leading-tight mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{user.farms.length} farm{user.farms.length !== 1 ? 's' : ''}</p>
+                <p className="text-[10px] truncate leading-tight mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{user.farms.length} {t(user.farms.length !== 1 ? 'farms' : 'farm')}</p>
               </div>
             )}
           </div>

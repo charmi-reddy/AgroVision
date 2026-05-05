@@ -6,7 +6,7 @@ import { Save, MapPin, Play, CheckCircle2, HelpCircle, AlertCircle } from 'lucid
 
 export default function FarmDetailsPage() {
   const { user, updateFarm } = useAuth();
-  const { refresh, hasAnalyzedData } = useData();
+  const { refresh, hasAnalyzedData, error: analysisError } = useData();
   const [saved, setSaved] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
@@ -38,37 +38,54 @@ export default function FarmDetailsPage() {
     }
   }, [activeFarm]);
 
-  const handleSave = () => {
-    if (!activeFarm) return;
-    updateFarm(activeFarm.id, {
-      name,
-      location,
+  const getCurrentFarm = () => {
+    if (!activeFarm) return null;
+    return {
+      ...activeFarm,
+      name: name.trim(),
+      location: location.trim(),
       lat,
       lon,
       soilType,
       area,
-      crop,
-      irrigationAmount,
-      irrigationSource,
-      fertilizer,
-    });
+      crop: crop.trim(),
+      irrigationAmount: irrigationAmount.trim(),
+      irrigationSource: irrigationSource.trim(),
+      fertilizer: fertilizer.trim(),
+    };
+  };
+
+  const handleSave = () => {
+    if (!activeFarm) return;
+    const farm = getCurrentFarm();
+    if (!farm) return;
+    updateFarm(activeFarm.id, farm);
     setSaved(true);
     setTimeout(() => setSaved(false), 2200);
   };
 
   const isDataComplete = name.trim() && location.trim() && soilType && area > 0;
   // Add crop, irrigation, fertilizer as required fields
-  const isFullDataComplete = isDataComplete && crop && irrigationAmount && irrigationSource && fertilizer;
+  const isFullDataComplete = isDataComplete && crop.trim() && irrigationAmount.trim() && irrigationSource.trim() && fertilizer.trim();
 
   const handleRunAnalysis = async () => {
-    if (!isDataComplete) {
-      alert('Please fill in all required farm details before running analysis.');
+    if (!isFullDataComplete) {
+      alert('Please fill in all required fields marked with * before running analysis.');
       return;
     }
 
     setAnalyzing(true);
     try {
-      await refresh();
+      const farm = getCurrentFarm();
+      if (!farm || !activeFarm) return;
+      updateFarm(activeFarm.id, farm);
+      const analyzed = await refresh(farm);
+      if (!analyzed) {
+        alert(analysisError || 'Analysis could not run. Please make sure the API server is running and try again.');
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2200);
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
@@ -245,7 +262,7 @@ export default function FarmDetailsPage() {
 
       {/* Actions */}
       <div className="flex gap-4 pt-6 border-t" style={{ borderColor: 'var(--border)' }}>
-        {!isDataComplete && (
+        {!isFullDataComplete && (
           <div className="flex items-center gap-2 p-3 rounded-lg flex-1" style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <span className="text-sm">Please fill in all required fields marked with * to enable analysis.</span>
@@ -253,17 +270,19 @@ export default function FarmDetailsPage() {
         )}
         <div className="flex gap-4 ml-auto">
           <button
+            type="button"
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors"
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer"
             style={{ background: 'var(--accent)', color: 'white' }}
           >
             <Save className="w-4 h-4" />
             Save Changes
           </button>
           <button
+            type="button"
             onClick={handleRunAnalysis}
-            disabled={analyzing || !isFullDataComplete}
-            className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+            disabled={analyzing}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
           >
             <Play className="w-4 h-4" />
