@@ -2,10 +2,12 @@ import { Droplets, CalendarPlus, Clock, TrendingDown, Sparkles, AlertCircle } fr
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../context/LanguageContext';
 import type { IrrigationZone } from '../services/api';
+import { useState } from 'react';
 
 export default function IrrigationPage() {
   const { irrigation, hasAnalyzedData } = useData();
   const { t } = useLanguage();
+  const [scheduledZoneIds, setScheduledZoneIds] = useState<Set<string>>(() => new Set());
 
   if (!hasAnalyzedData) {
     return (
@@ -39,10 +41,17 @@ export default function IrrigationPage() {
   }
 
   const total = irrigation.reduce((a: number, z: IrrigationZone) => a + z.waterAmount, 0);
-  const urgent = irrigation.filter((z: IrrigationZone) => z.status === 'active').length;
+  const scheduledCount = irrigation.filter((z: IrrigationZone) => scheduledZoneIds.has(z.id)).length;
 
   const chipFor = (s: string) => s === 'active' ? 'chip-blue' : s === 'scheduled' ? 'chip-amber' : s === 'completed' ? 'chip-accent' : 'chip-neutral';
-  const labelFor = (s: string) => s === 'active' ? t('Needs water') : s === 'scheduled' ? t('Recommended') : s === 'completed' ? t('Sufficient') : t('Optional');
+  const labelFor = (s: string) => s === 'active' ? t('Recommended') : s === 'scheduled' ? t('Scheduled') : s === 'completed' ? t('Sufficient') : t('Optional');
+  const displayStatusFor = (zone: IrrigationZone) => {
+    if (scheduledZoneIds.has(zone.id)) return 'scheduled';
+    return zone.status === 'completed' || zone.status === 'skipped' ? zone.status : 'active';
+  };
+  const scheduleZone = (zoneId: string) => {
+    setScheduledZoneIds(prev => new Set(prev).add(zoneId));
+  };
 
   return (
     <div className="px-5 sm:px-8 lg:px-10 py-6 lg:py-8 space-y-6 max-w-[1480px] mx-auto">
@@ -58,7 +67,7 @@ export default function IrrigationPage() {
           <div className="grid grid-cols-3 gap-2.5">
             {[
               { l: t('Today'), v: `${total.toFixed(0)}`, u: 'L' },
-              { l: t('Recommendations'), v: `${urgent}/${irrigation.length}`, u: '' },
+              { l: t('Recommendations'), v: `${scheduledCount}/${irrigation.length}`, u: '' },
               { l: t('Saved'), v: '32', u: '%', i: <TrendingDown className="w-4 h-4" /> },
             ].map((s, i) => (
               <div key={i} className="rounded-2xl p-3 backdrop-blur-md"
@@ -82,6 +91,8 @@ export default function IrrigationPage() {
           {irrigation.length > 0 ? irrigation.map((z: IrrigationZone) => {
             const pct = Math.min((z.soilMoisture / z.optimalMoisture) * 100, 100);
             const barColor = pct >= 90 ? 'var(--accent)' : pct >= 70 ? '#0ea5e9' : pct >= 50 ? '#f59e0b' : '#ef4444';
+            const displayStatus = displayStatusFor(z);
+            const isScheduled = displayStatus === 'scheduled';
             return (
               <div key={z.id} className="surface surface-hover p-5">
                 <div className="flex items-start justify-between mb-4">
@@ -89,7 +100,7 @@ export default function IrrigationPage() {
                     <p className="text-[14px] font-extrabold tight truncate" style={{ color: 'var(--text-primary)' }}>{z.zone}</p>
                     <p className="text-[11px] mt-0.5 mono" style={{ color: 'var(--text-tertiary)' }}>{z.nextWatering}</p>
                   </div>
-                  <span className={`chip ${chipFor(z.status)}`}>{labelFor(z.status)}</span>
+                  <span className={`chip ${chipFor(displayStatus)}`}>{labelFor(displayStatus)}</span>
                 </div>
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-1.5">
@@ -111,7 +122,14 @@ export default function IrrigationPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button className="btn-primary flex-1 !py-2 !text-[12px]"><CalendarPlus className="w-3 h-3" /> {t('Schedule')}</button>
+                  <button
+                    type="button"
+                    onClick={() => scheduleZone(z.id)}
+                    disabled={isScheduled}
+                    className="btn-primary flex-1 !py-2 !text-[12px] disabled:opacity-70 disabled:cursor-default"
+                  >
+                    <CalendarPlus className="w-3 h-3" /> {isScheduled ? t('Scheduled') : t('Schedule')}
+                  </button>
                 </div>
               </div>
             );
