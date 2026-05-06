@@ -413,12 +413,30 @@ Object.assign(translations.te, extraTranslations.te);
 const textNodeOriginals = new WeakMap<Text, string>();
 const attrOriginals = new WeakMap<Element, Record<string, string>>();
 
-function translateText(text: string, language: Language) {
-  if (language === 'en') return text;
-  const dict = translations[language];
+const reverseTranslations = Object.values(translations).reduce<Record<string, string>>((acc, dict) => {
+  Object.entries(dict).forEach(([english, translated]) => {
+    acc[translated.replace(/\s+/g, ' ')] = english;
+  });
+  return acc;
+}, {});
+
+function getTextParts(text: string) {
   const leading = text.match(/^\s*/)?.[0] || '';
   const trailing = text.match(/\s*$/)?.[0] || '';
   const core = text.trim().replace(/\s+/g, ' ');
+  return { leading, trailing, core };
+}
+
+function toEnglishSource(text: string) {
+  const { leading, trailing, core } = getTextParts(text);
+  const english = reverseTranslations[core];
+  return english ? `${leading}${english}${trailing}` : text;
+}
+
+function translateText(text: string, language: Language) {
+  if (language === 'en') return text;
+  const dict = translations[language];
+  const { leading, trailing, core } = getTextParts(text);
   return dict[core] ? `${leading}${dict[core]}${trailing}` : text;
 }
 
@@ -438,7 +456,7 @@ function translatePage(language: Language) {
 
   let node = walker.nextNode() as Text | null;
   while (node) {
-    if (!textNodeOriginals.has(node)) textNodeOriginals.set(node, node.textContent || '');
+    if (!textNodeOriginals.has(node)) textNodeOriginals.set(node, toEnglishSource(node.textContent || ''));
     const translated = translateText(textNodeOriginals.get(node) || '', language);
     if (node.textContent !== translated) node.textContent = translated;
     node = walker.nextNode() as Text | null;
@@ -450,7 +468,7 @@ function translatePage(language: Language) {
     attrs.forEach(attr => {
       const value = element.getAttribute(attr);
       if (!value) return;
-      if (!original[attr]) original[attr] = value;
+      if (!original[attr]) original[attr] = toEnglishSource(value);
       const translated = translateText(original[attr], language);
       if (element.getAttribute(attr) !== translated) element.setAttribute(attr, translated);
     });
