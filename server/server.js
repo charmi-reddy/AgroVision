@@ -4,6 +4,7 @@ import cors from 'cors';
 import axios from 'axios';
 import fs from 'fs/promises';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
 const app = express();
@@ -40,8 +41,20 @@ function normalizeEmail(email = '') {
 
 function publicUser(user) {
   if (!user) return null;
-  const { password, ...safeUser } = user;
+  const { password, passwordHash, ...safeUser } = user;
   return safeUser;
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(password, storedHash) {
+  if (!storedHash || !storedHash.includes(':')) return false;
+  const [salt, hash] = storedHash.split(':');
+  const candidate = crypto.scryptSync(password, salt, 64);
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), candidate);
 }
 
 async function readUsers() {
@@ -79,7 +92,7 @@ app.post('/api/auth/signup', async (req, res) => {
       id: `user_${Date.now()}`,
       name,
       email,
-      password,
+      passwordHash: hashPassword(password),
       avatar: initials,
       farms: [],
       activeFarmId: null,
@@ -101,8 +114,19 @@ app.post('/api/auth/login', async (req, res) => {
     const users = await readUsers();
     const user = users[email];
 
-    if (!user || user.password !== password) {
+    const passwordMatches = user?.passwordHash
+      ? verifyPassword(password, user.passwordHash)
+      : user?.password === password;
+
+    if (!user || !passwordMatches) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    if (!user.passwordHash) {
+      user.passwordHash = hashPassword(password);
+      delete user.password;
+      users[email] = user;
+      await writeUsers(users);
     }
 
     res.json({ user: publicUser(user) });

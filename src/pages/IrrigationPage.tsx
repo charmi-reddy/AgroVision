@@ -49,9 +49,15 @@ export default function IrrigationPage() {
     if (scheduledZoneIds.has(zone.id)) return 'scheduled';
     return zone.status === 'completed' || zone.status === 'skipped' ? zone.status : 'active';
   };
-  const scheduleZone = (zoneId: string) => {
-    setScheduledZoneIds(prev => new Set(prev).add(zoneId));
+  const toggleScheduleZone = (zoneId: string) => {
+    setScheduledZoneIds(prev => {
+      const next = new Set(prev);
+      if (next.has(zoneId)) next.delete(zoneId);
+      else next.add(zoneId);
+      return next;
+    });
   };
+  const scheduledZones = irrigation.filter((z: IrrigationZone) => scheduledZoneIds.has(z.id));
 
   return (
     <div className="px-5 sm:px-8 lg:px-10 py-6 lg:py-8 space-y-6 max-w-[1480px] mx-auto">
@@ -79,6 +85,36 @@ export default function IrrigationPage() {
           </div>
         </div>
       </div>
+
+      {scheduledZones.length > 0 && (
+        <section className="surface p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-[16px] font-bold tight" style={{ color: 'var(--text-primary)' }}>{t('Scheduled Irrigation')}</h3>
+              <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>{scheduledZones.length} {t('scheduled')}</p>
+            </div>
+            <span className="chip chip-amber">{scheduledZones.length}/{irrigation.length}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {scheduledZones.map((zone: IrrigationZone) => (
+              <div key={zone.id} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)' }}>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-extrabold truncate" style={{ color: 'var(--text-primary)' }}>{zone.zone}</p>
+                  <p className="text-[11px] mono mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{zone.nextWatering} - {zone.duration}m - {zone.waterAmount}L</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => toggleScheduleZone(zone.id)}
+                  className="px-3 py-2 rounded-lg text-[11px] font-extrabold cursor-pointer"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                >
+                  {t('Unschedule')}
+                </button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-4">
@@ -124,11 +160,11 @@ export default function IrrigationPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => scheduleZone(z.id)}
-                    disabled={isScheduled}
-                    className="btn-primary flex-1 !py-2 !text-[12px] disabled:opacity-70 disabled:cursor-default"
+                    onClick={() => toggleScheduleZone(z.id)}
+                    className="btn-primary flex-1 !py-2 !text-[12px]"
+                    style={isScheduled ? { background: 'var(--bg-sunken)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxShadow: 'none' } : undefined}
                   >
-                    <CalendarPlus className="w-3 h-3" /> {isScheduled ? t('Scheduled') : t('Schedule')}
+                    <CalendarPlus className="w-3 h-3" /> {isScheduled ? t('Unschedule') : t('Schedule')}
                   </button>
                 </div>
               </div>

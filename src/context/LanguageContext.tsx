@@ -64,6 +64,10 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
     Duration: 'अवधि',
     Water: 'पानी',
     Schedule: 'शेड्यूल करें',
+    Scheduled: 'शेड्यूल किया गया',
+    'Scheduled Irrigation': 'शेड्यूल की गई सिंचाई',
+    scheduled: 'शेड्यूल',
+    Unschedule: 'शेड्यूल हटाएं',
     'No irrigation recommendations yet.': 'अभी कोई सिंचाई सुझाव नहीं है।',
   },
   te: {
@@ -119,6 +123,10 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
     Duration: 'వ్యవధి',
     Water: 'నీరు',
     Schedule: 'షెడ్యూల్',
+    Scheduled: 'షెడ్యూల్ చేయబడింది',
+    'Scheduled Irrigation': 'షెడ్యూల్ చేసిన నీరుపారుదల',
+    scheduled: 'షెడ్యూల్',
+    Unschedule: 'షెడ్యూల్ తొలగించండి',
     'No irrigation recommendations yet.': 'ఇంకా నీరుపారుదల సూచనలు లేవు.',
   },
 };

@@ -181,23 +181,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       return true;
     } catch (error) {
-      console.error('Server login failed, checking local session cache:', error);
-    }
-
-    const users = getStoredUsers();
-    const existingUser = users[normalizedEmail];
-
-    if (existingUser) {
-      // Known user — welcome back
-      persistUser(existingUser);
+      console.error('Server login failed:', error);
       setIsLoading(false);
-      return true;
+      return false;
     }
-
-    // User doesn't exist — reject
-    setIsLoading(false);
-    return false;
-  }, [persistUser, persistUserLocal]);
+  }, [persistUserLocal]);
 
   const signup = useCallback(async (data: SignupData): Promise<boolean> => {
     setIsLoading(true);
