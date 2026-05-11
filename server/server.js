@@ -1,4 +1,9 @@
 import 'dotenv/config';
+
+// Railway debug endpoint
+app.get("/", (req, res) => {
+  res.send("AgroVision backend working");
+});
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
@@ -67,10 +72,10 @@ async function readUsers() {
   }
 }
 
-async function writeUsers(users) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-}
+// async function writeUsers(users) {
+//   await fs.mkdir(DATA_DIR, { recursive: true });
+//   await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+// }
 
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -99,7 +104,7 @@ app.post('/api/auth/signup', async (req, res) => {
     };
 
     users[email] = user;
-    await writeUsers(users);
+    // await writeUsers(users);
     res.status(201).json({ user: publicUser(user) });
   } catch (err) {
     console.error('Signup error:', err.message);
@@ -126,7 +131,7 @@ app.post('/api/auth/login', async (req, res) => {
       user.passwordHash = hashPassword(password);
       delete user.password;
       users[email] = user;
-      await writeUsers(users);
+      // await writeUsers(users);
     }
 
     res.json({ user: publicUser(user) });
@@ -157,7 +162,7 @@ app.put('/api/users/:email', async (req, res) => {
     };
 
     users[email] = updated;
-    await writeUsers(users);
+    // await writeUsers(users);
     res.json({ user: publicUser(updated) });
   } catch (err) {
     console.error('Save user error:', err.message);
