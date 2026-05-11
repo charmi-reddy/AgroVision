@@ -530,7 +530,6 @@ app.get('/api/health', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 AgroVision API running on http://localhost:${PORT}`);
-  console.log(`🌤️  OpenWeather connected · 🤖 Gemini model: ${GEMINI_MODEL}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
