@@ -1,10 +1,9 @@
 import 'dotenv/config';
-
-// Railway debug endpoint
+import express from 'express';
+// Railway debug endpoint (must be after app is defined)
 app.get("/", (req, res) => {
   res.send("AgroVision backend working");
 });
-import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
 import fs from 'fs/promises';
