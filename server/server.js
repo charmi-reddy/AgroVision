@@ -1,10 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
-// Railway debug endpoint (must be after app is defined)
-app.get("/", (req, res) => {
-  res.send("AgroVision backend working");
-});
 import cors from 'cors';
+
 import axios from 'axios';
 import fs from 'fs/promises';
 import path from 'path';
@@ -533,11 +530,14 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0', model: GEMINI_MODEL });
 });
 
+// Railway debug endpoint (must be after app is defined)
+app.get("/", (req, res) => {
+  res.send("AgroVision backend working");
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);
 })
 
-app.get("/", (req, res) => {
-  res.send("AgroVision backend running");
-});;
+// ...existing code...
