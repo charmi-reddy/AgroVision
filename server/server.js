@@ -3,10 +3,6 @@ import express from 'express';
 import cors from 'cors';
 
 import axios from 'axios';
-import fs from 'fs/promises';
-import path from 'path';
-import crypto from 'crypto';
-import { fileURLToPath } from 'url';
 
 const app = express();
 app.use(cors());
@@ -17,9 +13,10 @@ const OW_URL = process.env.OPENWEATHER_BASE_URL;
 const GEMINI_API = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-1.0-pro';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const PASSWORD_RESET_REDIRECT_URL = process.env.PASSWORD_RESET_REDIRECT_URL;
 
 // ─── Helpers ───
 
@@ -40,41 +37,108 @@ function normalizeEmail(email = '') {
   return String(email).trim().toLowerCase();
 }
 
-function publicUser(user) {
-  if (!user) return null;
-  const { password, passwordHash, ...safeUser } = user;
-  return safeUser;
+function supabaseReady() {
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
-  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
-  return `${salt}:${hash}`;
+function ensureSupabase(res) {
+  if (supabaseReady()) return true;
+  res.status(500).json({ error: 'Supabase is not configured on the server' });
+  return false;
 }
 
-function verifyPassword(password, storedHash) {
-  if (!storedHash || !storedHash.includes(':')) return false;
-  const [salt, hash] = storedHash.split(':');
-  const candidate = crypto.scryptSync(password, salt, 64);
-  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), candidate);
-}
-
-async function readUsers() {
-  try {
-    const raw = await fs.readFile(USERS_FILE, 'utf8');
-    return JSON.parse(raw);
-  } catch (err) {
-    if (err.code === 'ENOENT') return {};
-    throw err;
+async function supabaseRequest(path, { method = 'GET', body, service = false, query = '' } = {}) {
+  const key = service ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
+  const res = await fetch(`${SUPABASE_URL}${path}${query}`, {
+    method,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error_description || data?.msg || data?.message || data?.error || `Supabase error: ${res.status}`);
   }
+  return data;
 }
 
-// async function writeUsers(users) {
-//   await fs.mkdir(DATA_DIR, { recursive: true });
-//   await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
-// }
+async function supabaseUserRequest(path, accessToken) {
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new Error(data?.error_description || data?.msg || data?.message || data?.error || `Supabase error: ${res.status}`);
+  }
+  return data;
+}
+
+async function getAuthUserFromRequest(req) {
+  const header = req.headers.authorization || '';
+  const accessToken = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!accessToken) return null;
+  return supabaseUserRequest('/auth/v1/user', accessToken);
+}
+
+function initialsFor(name) {
+  return name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2) || 'FA';
+}
+
+function mapProfile(profile, authUser = {}) {
+  const name = profile?.name || authUser?.user_metadata?.name || 'Farmer';
+  const email = normalizeEmail(profile?.email || authUser?.email);
+  return {
+    id: profile?.id || authUser?.id,
+    name,
+    email,
+    avatar: profile?.avatar || initialsFor(name),
+    farms: Array.isArray(profile?.farms) ? profile.farms : [],
+    activeFarmId: profile?.active_farm_id || null,
+  };
+}
+
+async function getProfileById(id, authUser = {}) {
+  const query = `?id=eq.${encodeURIComponent(id)}&select=id,name,email,avatar,farms,active_farm_id&limit=1`;
+  const rows = await supabaseRequest('/rest/v1/profiles', { service: true, query });
+  return mapProfile(rows?.[0], authUser);
+}
+
+async function getProfileByEmail(email) {
+  const query = `?email=eq.${encodeURIComponent(email)}&select=id,name,email,avatar,farms,active_farm_id&limit=1`;
+  const rows = await supabaseRequest('/rest/v1/profiles', { service: true, query });
+  return rows?.[0] ? mapProfile(rows[0]) : null;
+}
+
+async function upsertProfile(profile) {
+  const body = {
+    id: profile.id,
+    name: profile.name,
+    email: normalizeEmail(profile.email),
+    avatar: profile.avatar || initialsFor(profile.name),
+    farms: Array.isArray(profile.farms) ? profile.farms : [],
+    active_farm_id: profile.activeFarmId || null,
+  };
+
+  const rows = await supabaseRequest('/rest/v1/profiles', {
+    method: 'POST',
+    service: true,
+    query: '?on_conflict=id',
+    body,
+  });
+  return mapProfile(rows?.[0] || body);
+}
 
 app.post('/api/auth/signup', async (req, res) => {
   try {
+    if (!ensureSupabase(res)) return;
     const name = String(req.body.name || '').trim();
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || '');
@@ -83,66 +147,111 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ error: 'Name, email, and password are required' });
     }
 
-    const users = await readUsers();
-    if (users[email]) {
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const existingProfile = await getProfileByEmail(email);
+    if (existingProfile) {
       return res.status(409).json({ error: 'An account with this email already exists' });
     }
 
-    const initials = name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2) || 'FA';
-    const user = {
-      id: `user_${Date.now()}`,
+    const authResult = await supabaseRequest('/auth/v1/signup', {
+      method: 'POST',
+      body: {
+        email,
+        password,
+        data: { name },
+      },
+    });
+
+    if (!authResult?.user?.id) {
+      return res.status(409).json({ error: 'An account with this email already exists or is waiting for email verification' });
+    }
+
+    const user = await upsertProfile({
+      id: authResult.user.id,
       name,
       email,
-      passwordHash: hashPassword(password),
-      avatar: initials,
+      avatar: initialsFor(name),
       farms: [],
       activeFarmId: null,
-    };
+    });
 
-    users[email] = user;
-    // await writeUsers(users);
-    res.status(201).json({ user: publicUser(user) });
+    res.status(201).json({ user, accessToken: authResult.session?.access_token });
   } catch (err) {
     console.error('Signup error:', err.message);
-    res.status(500).json({ error: 'Failed to create account' });
+    const status = /already|registered|exists/i.test(err.message) ? 409 : 500;
+    res.status(status).json({ error: status === 409 ? 'An account with this email already exists' : 'Failed to create account' });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
+    if (!ensureSupabase(res)) return;
     const email = normalizeEmail(req.body.email);
     const password = String(req.body.password || '');
-    const users = await readUsers();
-    const user = users[email];
 
-    const passwordMatches = user?.passwordHash
-      ? verifyPassword(password, user.passwordHash)
-      : user?.password === password;
-
-    if (!user || !passwordMatches) {
+    if (!email || !password) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    if (!user.passwordHash) {
-      user.passwordHash = hashPassword(password);
-      delete user.password;
-      users[email] = user;
-      // await writeUsers(users);
-    }
+    const authResult = await supabaseRequest('/auth/v1/token', {
+      method: 'POST',
+      query: '?grant_type=password',
+      body: { email, password },
+    });
 
-    res.json({ user: publicUser(user) });
+    const user = await getProfileById(authResult.user.id, authResult.user);
+    res.json({ user, accessToken: authResult.access_token });
   } catch (err) {
     console.error('Login error:', err.message);
-    res.status(500).json({ error: 'Failed to sign in' });
+    res.status(401).json({ error: 'Invalid email or password' });
+  }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const authUser = await getAuthUserFromRequest(req);
+    if (!authUser) return res.status(401).json({ error: 'Not authenticated' });
+    const user = await getProfileById(authUser.id, authUser);
+    res.json({ user });
+  } catch (err) {
+    console.error('Current user error:', err.message);
+    res.status(401).json({ error: 'Not authenticated' });
+  }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    if (!ensureSupabase(res)) return;
+    const email = normalizeEmail(req.body.email);
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const body = { email };
+    if (PASSWORD_RESET_REDIRECT_URL) body.redirect_to = PASSWORD_RESET_REDIRECT_URL;
+    await supabaseRequest('/auth/v1/recover', { method: 'POST', body });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Forgot password error:', err.message);
+    res.status(500).json({ error: 'Failed to send password reset email' });
   }
 });
 
 app.put('/api/users/:email', async (req, res) => {
   try {
+    if (!ensureSupabase(res)) return;
     const email = normalizeEmail(req.params.email);
     const incoming = req.body.user || {};
-    const users = await readUsers();
-    const existing = users[email];
+    const authUser = await getAuthUserFromRequest(req);
+    if (!authUser || normalizeEmail(authUser.email) !== email) {
+      return res.status(401).json({ error: 'Not authenticated' });
+    }
+
+    const existing = await getProfileByEmail(email);
 
     if (!existing) {
       return res.status(404).json({ error: 'User not found' });
@@ -157,9 +266,8 @@ app.put('/api/users/:email', async (req, res) => {
       email,
     };
 
-    users[email] = updated;
-    // await writeUsers(users);
-    res.json({ user: publicUser(updated) });
+    const saved = await upsertProfile(updated);
+    res.json({ user: saved });
   } catch (err) {
     console.error('Save user error:', err.message);
     res.status(500).json({ error: 'Failed to save user' });

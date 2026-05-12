@@ -214,6 +214,11 @@ export interface AuthUser {
   activeFarmId: string | null;
 }
 
+export interface AuthResult {
+  user: AuthUser;
+  accessToken?: string;
+}
+
 async function sendJSON<T>(url: string, body: unknown, method = 'POST'): Promise<T> {
   const res = await fetch(url, {
     method,
@@ -227,17 +232,43 @@ async function sendJSON<T>(url: string, body: unknown, method = 'POST'): Promise
   return res.json();
 }
 
-export async function apiLogin(email: string, password: string): Promise<AuthUser> {
-  const result = await sendJSON<{ user: AuthUser }>(`${API_BASE}/auth/login`, { email, password });
+export async function apiLogin(email: string, password: string): Promise<AuthResult> {
+  return sendJSON<AuthResult>(`${API_BASE}/auth/login`, { email, password });
+}
+
+export async function apiSignup(data: { name: string; email: string; password: string }): Promise<AuthResult> {
+  return sendJSON<AuthResult>(`${API_BASE}/auth/signup`, data);
+}
+
+export async function apiCurrentUser(accessToken: string): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/auth/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Network error' }));
+    throw new Error(err.error || `API error: ${res.status}`);
+  }
+  const result = await res.json() as { user: AuthUser };
   return result.user;
 }
 
-export async function apiSignup(data: { name: string; email: string; password: string }): Promise<AuthUser> {
-  const result = await sendJSON<{ user: AuthUser }>(`${API_BASE}/auth/signup`, data);
-  return result.user;
+export async function apiForgotPassword(email: string): Promise<void> {
+  await sendJSON<{ ok: true }>(`${API_BASE}/auth/forgot-password`, { email });
 }
 
-export async function apiSaveUser(user: AuthUser): Promise<AuthUser> {
-  const result = await sendJSON<{ user: AuthUser }>(`${API_BASE}/users/${encodeURIComponent(user.email)}`, { user }, 'PUT');
+export async function apiSaveUser(user: AuthUser, accessToken?: string | null): Promise<AuthUser> {
+  const res = await fetch(`${API_BASE}/users/${encodeURIComponent(user.email)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+    body: JSON.stringify({ user }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Network error' }));
+    throw new Error(err.error || `API error: ${res.status}`);
+  }
+  const result = await res.json() as { user: AuthUser };
   return result.user;
 }

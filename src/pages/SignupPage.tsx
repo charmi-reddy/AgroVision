@@ -17,12 +17,12 @@ export default function SignupPage({ onToggleAuth }: { onToggleAuth: () => void 
     e.preventDefault();
     setError('');
     if (!name || !email || !password) { setError('Fill all fields'); return; }
-    if (password.length < 6) { setError('Min 6 chars'); return; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
     const ok = await signup({ name, email, password });
     if (!ok) setError('An account with this email already exists. Please sign in.');
   };
 
-  const str = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : 3;
+  const str = password.length === 0 ? 0 : password.length < 8 ? 1 : password.length < 12 ? 2 : 3;
 
   return (
     <div className="min-h-dvh relative overflow-hidden flex items-center justify-center px-4 py-8" style={{ background: 'var(--bg-base)' }}>
@@ -87,7 +87,7 @@ export default function SignupPage({ onToggleAuth }: { onToggleAuth: () => void 
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider mono" style={{ color: 'var(--text-tertiary)' }}>Password</label>
                 <div className="relative mt-1.5">
-                  <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="input-base pr-12" placeholder="Min 6 characters" />
+                  <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} className="input-base pr-12" placeholder="Min 8 characters" />
                   <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer" style={{ color: 'var(--text-tertiary)' }}>
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

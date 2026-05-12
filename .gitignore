@@ -10,6 +10,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+!.env.example
 
 # Server environment files
 server/.env
@@ -17,6 +18,7 @@ server/.env.local
 server/.env.development.local
 server/.env.test.local
 server/.env.production.local
+!server/.env.example
 
 # Root environment files
 .env

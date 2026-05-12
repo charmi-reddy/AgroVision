@@ -2,22 +2,39 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Logo from '../components/Logo';
-import { Eye, EyeOff, ArrowRight, Loader2, ShieldCheck, Sun, Moon, Sparkles, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ArrowRight, Loader2, ShieldCheck, Sun, Moon, Sparkles, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function LoginPage({ onToggleAuth }: { onToggleAuth: () => void }) {
-  const { login, isLoading } = useAuth();
+  const { login, forgotPassword, isLoading } = useAuth();
   const { theme, toggle } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     if (!email || !password) { setError('Please fill in all fields'); return; }
     const ok = await login(email, password);
-    if (!ok) setError('No account found with this email. Please sign up first.');
+    if (!ok) setError('Invalid email or password.');
+  };
+
+  const resetPassword = async () => {
+    setError('');
+    setMessage('');
+    if (!email) {
+      setError('Enter your email first, then click forgot password.');
+      return;
+    }
+    const ok = await forgotPassword(email);
+    if (ok) {
+      setMessage('Password reset email sent. Check your inbox.');
+    } else {
+      setError('Could not send reset email. Please try again.');
+    }
   };
 
   return (
@@ -75,6 +92,13 @@ export default function LoginPage({ onToggleAuth }: { onToggleAuth: () => void }
                   <span>{error}</span>
                 </div>
               )}
+              {message && (
+                <div className="px-4 py-3 rounded-xl text-[13px] font-medium anim-scale-up flex items-start gap-2"
+                  style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', color: '#16a34a' }}>
+                  <CheckCircle2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <span>{message}</span>
+                </div>
+              )}
               <div>
                 <label className="text-[11px] font-bold uppercase tracking-wider mono" style={{ color: 'var(--text-tertiary)' }}>Email</label>
                 <div className="relative mt-1.5">
@@ -94,7 +118,7 @@ export default function LoginPage({ onToggleAuth }: { onToggleAuth: () => void }
               </div>
               <div className="flex items-center justify-between pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-[12px]" style={{ color: 'var(--text-secondary)' }}><input type="checkbox" defaultChecked className="w-3.5 h-3.5 rounded accent-emerald-500" />Remember me</label>
-                <button type="button" className="text-[12px] font-semibold cursor-pointer" style={{ color: 'var(--accent)' }}>Forgot password?</button>
+                <button type="button" onClick={resetPassword} disabled={isLoading} className="text-[12px] font-semibold cursor-pointer disabled:opacity-60" style={{ color: 'var(--accent)' }}>Forgot password?</button>
               </div>
               <button type="submit" disabled={isLoading} className="btn-primary w-full !py-3 !text-[14px] !rounded-xl mt-2 disabled:opacity-60">
                 {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : <>Sign In <ArrowRight className="w-4 h-4" /></>}
