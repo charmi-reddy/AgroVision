@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = 'https://agrovision-f06s.onrender.com/api';
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url);
