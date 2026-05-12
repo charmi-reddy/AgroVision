@@ -44,31 +44,15 @@ export interface SignupData {
   password: string;
 }
 
-const SESSION_KEY = 'agrovision_auth_session';
-
-interface StoredSession {
-  accessToken?: string;
-  user?: User;
-}
+const TOKEN_KEY = 'agrovision_auth_token';
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function readSession(): StoredSession {
-  try {
-    return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
-  } catch {
-    return {};
-  }
-}
-
-function writeSession(session: StoredSession) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
 function clearLegacyAuthStorage() {
   [
+    'agrovision_auth_session',
     'agrovision_users',
     'agrovision_current_user',
     'agrovision_user',
@@ -82,15 +66,16 @@ function clearLegacyAuthStorage() {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [accessToken, setAccessToken] = useState<string | null>(() => readSession().accessToken || null);
-  const [user, setUser] = useState<User | null>(() => readSession().user || null);
-  const [isLoading, setIsLoading] = useState(Boolean(readSession().accessToken));
+  const [accessToken, setAccessToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY)));
 
   const storeAuth = useCallback((nextUser: User, nextToken?: string | null) => {
     const normalizedUser = { ...nextUser, email: normalizeEmail(nextUser.email) };
     setUser(normalizedUser);
     if (nextToken) setAccessToken(nextToken);
-    writeSession({ user: normalizedUser, accessToken: nextToken || accessToken || undefined });
+    const tokenToStore = nextToken || accessToken;
+    if (tokenToStore) localStorage.setItem(TOKEN_KEY, tokenToStore);
     return normalizedUser;
   }, [accessToken]);
 
@@ -118,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!alive) return;
         setUser(null);
         setAccessToken(null);
-        localStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(TOKEN_KEY);
       })
       .finally(() => {
         if (alive) setIsLoading(false);
@@ -209,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     setUser(null);
     setAccessToken(null);
-    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   }, []);
 
   return (

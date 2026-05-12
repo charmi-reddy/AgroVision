@@ -81,6 +81,19 @@ async function supabaseUserRequest(path, accessToken) {
   return data;
 }
 
+async function createAuthUser({ name, email, password }) {
+  return supabaseRequest('/auth/v1/admin/users', {
+    method: 'POST',
+    service: true,
+    body: {
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { name },
+    },
+  });
+}
+
 async function getAuthUserFromRequest(req) {
   const header = req.headers.authorization || '';
   const accessToken = header.startsWith('Bearer ') ? header.slice(7) : '';
@@ -108,7 +121,17 @@ function mapProfile(profile, authUser = {}) {
 async function getProfileById(id, authUser = {}) {
   const query = `?id=eq.${encodeURIComponent(id)}&select=id,name,email,avatar,farms,active_farm_id&limit=1`;
   const rows = await supabaseRequest('/rest/v1/profiles', { service: true, query });
-  return mapProfile(rows?.[0], authUser);
+  if (rows?.[0]) return mapProfile(rows[0], authUser);
+  if (!authUser?.id) return null;
+
+  return upsertProfile({
+    id: authUser.id,
+    name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Farmer',
+    email: authUser.email,
+    avatar: initialsFor(authUser.user_metadata?.name || 'Farmer'),
+    farms: [],
+    activeFarmId: null,
+  });
 }
 
 async function getProfileByEmail(email) {
@@ -151,26 +174,10 @@ app.post('/api/auth/signup', async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    const existingProfile = await getProfileByEmail(email);
-    if (existingProfile) {
-      return res.status(409).json({ error: 'An account with this email already exists' });
-    }
-
-    const authResult = await supabaseRequest('/auth/v1/signup', {
-      method: 'POST',
-      body: {
-        email,
-        password,
-        data: { name },
-      },
-    });
-
-    if (!authResult?.user?.id) {
-      return res.status(409).json({ error: 'An account with this email already exists or is waiting for email verification' });
-    }
+    const authUser = await createAuthUser({ name, email, password });
 
     const user = await upsertProfile({
-      id: authResult.user.id,
+      id: authUser.id,
       name,
       email,
       avatar: initialsFor(name),
@@ -178,10 +185,16 @@ app.post('/api/auth/signup', async (req, res) => {
       activeFarmId: null,
     });
 
-    res.status(201).json({ user, accessToken: authResult.session?.access_token });
+    const authResult = await supabaseRequest('/auth/v1/token', {
+      method: 'POST',
+      query: '?grant_type=password',
+      body: { email, password },
+    });
+
+    res.status(201).json({ user, accessToken: authResult.access_token });
   } catch (err) {
     console.error('Signup error:', err.message);
-    const status = /already|registered|exists/i.test(err.message) ? 409 : 500;
+    const status = /already|registered|exists|duplicate/i.test(err.message) ? 409 : 500;
     res.status(status).json({ error: status === 409 ? 'An account with this email already exists' : 'Failed to create account' });
   }
 });
@@ -206,6 +219,9 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ user, accessToken: authResult.access_token });
   } catch (err) {
     console.error('Login error:', err.message);
+    if (/email not confirmed|not confirmed/i.test(err.message)) {
+      return res.status(403).json({ error: 'Please confirm your email before signing in' });
+    }
     res.status(401).json({ error: 'Invalid email or password' });
   }
 });
