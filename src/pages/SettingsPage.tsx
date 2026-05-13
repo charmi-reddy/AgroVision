@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const { user, addFarm, removeFarm, setActiveFarm } = useAuth();
   const { theme, setTheme } = useTheme();
   const [saved, setSaved] = useState(false);
-  const [notif, setNotif] = useState({ weather: true, pest: true, irrigation: true, market: false, soil: true, voice: false });
+  const [notif, setNotif] = useState({ weather: true, pest: true, irrigation: true, market: false, soil: true });
 
   const [showAddFarm, setShowAddFarm] = useState(false);
   const [newFarmName, setNewFarmName] = useState('');
@@ -192,7 +192,7 @@ export default function SettingsPage() {
               <div className="min-w-0 mr-4">
                 <p className="text-[13px] font-bold capitalize" style={{ color: 'var(--text-primary)' }}>{k} alerts</p>
                 <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>{
-                  k === 'weather' ? 'Weather warnings' : k === 'pest' ? 'Pest predictions' : k === 'irrigation' ? 'Irrigation reminders' : k === 'market' ? 'Price trends' : k === 'soil' ? 'Soil health' : 'Voice notifications'
+                  k === 'weather' ? 'Weather warnings' : k === 'pest' ? 'Pest predictions' : k === 'irrigation' ? 'Irrigation reminders' : k === 'market' ? 'Price trends' : 'Soil health'
                 }</p>
               </div>
               <Toggle on={v} fn={() => setNotif({ ...notif, [k]: !v })} />

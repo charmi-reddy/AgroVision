@@ -1,4 +1,4 @@
-import { Bell, Search, Mic, Sun, Moon, Sparkles, ChevronDown } from 'lucide-react';
+import { Bell, Search, Sun, Moon, Sparkles, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useData } from '../context/DataContext';
@@ -84,11 +84,6 @@ export default function Header({ title, subtitle, onNavigate }: { title: string;
             <kbd className="hidden lg:inline text-[9px] px-1.5 py-px rounded font-mono"
               style={{ background: 'var(--bg-elevated)', color: 'var(--text-tertiary)', border: '1px solid var(--border)' }}>Ctrl K</kbd>
           </div>
-
-          <button className="btn-icon hidden sm:flex relative group">
-            <Mic className="w-4 h-4" style={{ color: 'var(--accent)' }} />
-            <span className="absolute inset-0 rounded-[10px] anim-pulse-glow pointer-events-none" />
-          </button>
 
           <div className="hidden sm:flex items-center gap-1 rounded-xl p-1"
             style={{ background: 'var(--bg-sunken)', border: '1px solid var(--border)' }}

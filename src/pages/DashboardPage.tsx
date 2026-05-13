@@ -355,9 +355,9 @@ export default function DashboardPage({ onNavigate }: { onNavigate: (p: string) 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger">
         {[
           { label: 'Irrigation', emoji: '💧', sub: `${irrigation.length} zones active`, go: 'irrigation' },
-          { label: 'Soil', emoji: '🧪', sub: soil ? `pH ${soil.ph}` : '--', go: 'soil' },
           { label: 'Crops', emoji: '🌾', sub: `${crops.length} recommendations`, go: 'crops' },
           { label: 'Fertilizer', emoji: '⚗️', sub: 'Plans ready', go: 'fertilizer' },
+          { label: 'Alerts', emoji: '🔔', sub: `${alerts.length} insights`, go: 'alerts' },
         ].map((q, i) => (
           <button key={i} onClick={() => onNavigate(q.go)}
             className="surface p-4 text-left cursor-pointer group">

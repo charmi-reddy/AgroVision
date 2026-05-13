@@ -12,7 +12,6 @@ import DashboardPage from './pages/DashboardPage';
 import WeatherPage from './pages/WeatherPage';
 import CropAdvisoryPage from './pages/CropAdvisoryPage';
 import IrrigationPage from './pages/IrrigationPage';
-import SoilPage from './pages/SoilPage';
 import FertilizerPage from './pages/FertilizerPage';
 import AlertsPage from './pages/AlertsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -23,7 +22,6 @@ const META: Record<string, { title: string; subtitle: string }> = {
   weather: { title: 'Weather Intelligence', subtitle: 'Hyperlocal forecasts powered by AI' },
   crops: { title: 'Crop Advisory', subtitle: 'Climate-resilient planting recommendations' },
   irrigation: { title: 'Smart Irrigation', subtitle: 'Optimized watering schedules' },
-  soil: { title: 'Soil Diagnostics', subtitle: 'Deep nutrient & moisture analysis' },
   fertilizer: { title: 'Nutrient Plan', subtitle: 'Precision fertilizer prescriptions' },
   alerts: { title: 'Alerts & Insights', subtitle: 'Real-time field notifications' },
   settings: { title: 'Settings', subtitle: 'Workspace preferences' },
@@ -62,7 +60,6 @@ function Shell() {
       case 'weather': return <WeatherPage />;
       case 'crops': return <CropAdvisoryPage />;
       case 'irrigation': return <IrrigationPage />;
-      case 'soil': return <SoilPage />;
       case 'fertilizer': return <FertilizerPage />;
       case 'alerts': return <AlertsPage />;
       case 'settings': return <SettingsPage />;

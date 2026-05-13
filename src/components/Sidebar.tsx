@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import {
-  LayoutDashboard, CloudSun, Sprout, Droplets, FlaskConical,
+  LayoutDashboard, CloudSun, Sprout, Droplets,
   Bell, Settings, LogOut, BarChart3, Menu, X, ChevronsLeft, ChevronsRight,
   MapPin,
 } from 'lucide-react';
@@ -16,7 +16,6 @@ const NAV_MAIN = [
   { id: 'irrigation', label: 'Irrigation', icon: Droplets },
 ];
 const NAV_INSIGHTS = [
-  { id: 'soil', label: 'Soil Diagnostics', icon: FlaskConical },
   { id: 'fertilizer', label: 'Nutrient Plan', icon: BarChart3 },
   { id: 'alerts', label: 'Alerts', icon: Bell },
 ];

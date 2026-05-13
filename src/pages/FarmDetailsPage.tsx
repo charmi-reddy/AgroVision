@@ -8,6 +8,7 @@ export default function FarmDetailsPage() {
   const { user, updateFarm } = useAuth();
   const { refresh, hasAnalyzedData, error: analysisError } = useData();
   const [saved, setSaved] = useState(false);
+  const [analysisDone, setAnalysisDone] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -85,7 +86,9 @@ export default function FarmDetailsPage() {
         return;
       }
       setSaved(true);
+      setAnalysisDone(true);
       setTimeout(() => setSaved(false), 2200);
+      setTimeout(() => setAnalysisDone(false), 5000);
     } catch (error) {
       console.error('Analysis failed:', error);
     } finally {
@@ -125,9 +128,17 @@ export default function FarmDetailsPage() {
             <p><strong>Soil Type:</strong> Select the predominant soil type on your farm</p>
             <p><strong>Area:</strong> Enter your farm size in acres</p>
             <p className="mt-3 font-medium" style={{ color: 'var(--accent)' }}>
-              💡 Once all fields are filled, click "Run Analysis" to get personalized weather, soil, crop, irrigation, and fertilizer recommendations!
+              💡 Once all fields are filled, click "Run Analysis", then open "Overview" to review your personalized weather, crop, irrigation, fertilizer, and alert insights.
             </p>
           </div>
+        </div>
+      )}
+
+      {analysisDone && (
+        <div className="fixed top-6 right-6 px-5 py-3 rounded-xl flex items-center gap-2 z-[100] anim-scale-up"
+          style={{ background: 'var(--accent)', color: 'white', boxShadow: '0 12px 40px var(--accent-glow)' }}>
+          <CheckCircle2 className="w-4 h-4" />
+          <span className="text-[13px] font-bold">Analysis complete. Open Overview to see your insights.</span>
         </div>
       )}
 
